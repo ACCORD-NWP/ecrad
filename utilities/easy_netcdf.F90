@@ -26,7 +26,6 @@
 
 module easy_netcdf
 
-  use netcdf
   use parkind1,      only : jprb, jpib, jprm, jprd
   use radiation_io,  only : nulout, nulerr, my_abort => radiation_abort
 
@@ -132,6 +131,9 @@ contains
   ! verbosity level (0-5) and if the file is for writing (the default
   ! is read-only)
   subroutine open_netcdf_file(this, file_name, iverbose, is_write_mode, is_hdf5_file)
+    use netcdf, only: NF90_CLOBBER, NF90_HDF5, NF90_NOERR, NF90_NOWRITE, &
+        &             nf90_create, nf90_open, nf90_strerror
+
     class(netcdf_file)            :: this
     character(len=*), intent(in)  :: file_name
     integer, intent(in), optional :: iverbose
@@ -208,6 +210,9 @@ contains
   !---------------------------------------------------------------------
   ! Open a NetCDF file for writing
   subroutine create_netcdf_file(this, file_name, iverbose, is_hdf5_file)
+    use netcdf, only: NF90_CLOBBER, NF90_HDF5, NF90_NOERR, &
+        &             nf90_create, nf90_strerror
+
     class(netcdf_file)            :: this
     character(len=*), intent(in)  :: file_name
     integer, intent(in), optional :: iverbose
@@ -259,6 +264,8 @@ contains
   !---------------------------------------------------------------------
   ! Close the NetCDF file
   subroutine close_netcdf_file(this)
+    use netcdf, only: NF90_NOERR, nf90_close, nf90_strerror
+
     class(netcdf_file) :: this
     integer            :: istatus
 
@@ -357,6 +364,8 @@ contains
   ! Return the NetCDF variable ID for variable "var_name", or abort if
   ! not present
   subroutine get_variable_id(this, var_name, ivarid)
+    use netcdf, only: NF90_NOERR, nf90_inq_varid, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     integer, intent(out)         :: ivarid
@@ -378,6 +387,9 @@ contains
   ! with the number of dimensions and optionally the total number of
   ! elements, or abort if variable not present
   subroutine get_array_dimensions(this, ivarid, ndims, ndimlens, ntotal)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, &
+        &             nf90_inquire_variable, nf90_inquire_dimension, nf90_strerror
+
     class(netcdf_file)             :: this
     integer, intent(in)            :: ivarid
     integer, intent(out)           :: ndims
@@ -421,6 +433,8 @@ contains
   ! (errors are possible if variables are too large for the format,
   ! for example)
   subroutine end_define_mode(this)
+    use netcdf, only: NF90_NOERR, nf90_enddef, nf90_strerror
+
     class(netcdf_file)             :: this
     integer                        :: istatus
     if (this%is_define_mode) then
@@ -449,6 +463,9 @@ contains
   ! Return the number of dimensions of variable with name var_name, or
   ! -1 if the variable is not found
   function get_rank(this, var_name) result(ndims)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, NF90_ENOTVAR, &
+        &             nf90_inq_varid, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
 
@@ -480,6 +497,9 @@ contains
   ! Return the length of the slowest-varying dimension of variable
   ! with name var_name, or -1 if the variable is not found
   function get_outer_dimension(this, var_name) result(n)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, NF90_ENOTVAR, &
+        &             nf90_inq_varid, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
 
@@ -512,6 +532,8 @@ contains
   !---------------------------------------------------------------------
   ! Return true if the variable is present, false otherwise
   function exists(this, var_name) result(is_present)
+    use netcdf, only: NF90_NOERR, nf90_inq_varid
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
 
@@ -537,6 +559,8 @@ contains
   ! fixed array size and want to check whether the attribute will fit
   ! into it.
   function attribute_exists(this, var_name, attr_name, len) result(is_present)
+    use netcdf, only: NF90_NOERR, nf90_inquire_attribute, nf90_inq_varid
+
     class(netcdf_file)            :: this
     character(len=*), intent(in)  :: var_name, attr_name
     integer, optional, intent(in) :: len
@@ -573,6 +597,8 @@ contains
   ! fixed array size and want to check whether the attribute will fit
   ! into it.
   function global_attribute_exists(this, attr_name, len) result(is_present)
+    use netcdf, only: NF90_NOERR, NF90_GLOBAL, nf90_inquire_attribute
+
     class(netcdf_file)            :: this
     character(len=*), intent(in)  :: attr_name
     integer, optional, intent(in) :: len
@@ -602,6 +628,8 @@ contains
   ! depending on the rank of the output argument. This version reads a
   ! scalar.
   subroutine get_real_scalar(this, var_name, scalar)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     real(jprb), intent(out)      :: scalar
@@ -647,6 +675,8 @@ contains
   !---------------------------------------------------------------------
   ! Read an integer scalar
   subroutine get_int_scalar(this, var_name, scalar)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     integer,          intent(out):: scalar
@@ -693,6 +723,8 @@ contains
   ! Read a scalar from a larger array, where "index" indexes the most
   ! slowly varying dimension
   subroutine get_real_scalar_indexed(this, var_name, scalar, index)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     integer, intent(in)          :: index
@@ -750,6 +782,8 @@ contains
   ! Read a 1D real array into "vector", which must be allocatable and
   ! will be reallocated if necessary
   subroutine get_real_vector(this, var_name, vector)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     real(jprb), allocatable, intent(out) :: vector(:)
@@ -808,6 +842,8 @@ contains
   ! Read a 1D character array into "vector", which must be allocatable
   ! and will be reallocated if necessary
   subroutine get_char_vector(this, var_name, vector)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     character(len=1), allocatable, intent(out) :: vector(:)
@@ -866,6 +902,7 @@ contains
   ! Read a 1D integer array into "vector", which must be allocatable
   ! and will be reallocated if necessary
   subroutine get_int_vector(this, var_name, vector)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
 
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
@@ -924,6 +961,8 @@ contains
   ! Read a vector of data from a larger array; the vector must be
   ! allocatable and will be reallocated if necessary
   subroutine get_real_vector_indexed(this, var_name, vector, index)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     integer, intent(in)          :: index
@@ -999,6 +1038,8 @@ contains
   ! final optional argument, but can also be specified by the
   ! do_transpose_2d class data member.
   subroutine get_real_matrix(this, var_name, matrix, do_transp)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     real(jprb), allocatable, intent(out) :: matrix(:,:)
@@ -1109,6 +1150,8 @@ contains
   ! transpose is specifed by the final optional argument, but can also
   ! be specified by the do_transpose_2d class data member.
   subroutine get_char_matrix(this, var_name, matrix, do_transp)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     character(len=1), allocatable, intent(inout) :: matrix(:,:)
@@ -1227,6 +1270,8 @@ contains
   ! specifed by the final optional argument, but can also be specified
   ! by the do_transpose_2d class data member.
   subroutine get_real_matrix_indexed(this, var_name, matrix, index, do_transp)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: var_name
     integer, intent(in)          :: index
@@ -1350,6 +1395,8 @@ contains
   ! reallocated if necessary.  Whether to pemute is specifed by the
   ! final optional argument
   subroutine get_real_array3(this, var_name, var, ipermute)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)                   :: this
     character(len=*), intent(in)         :: var_name
     real(jprb), allocatable, intent(out) :: var(:,:,:)
@@ -1483,6 +1530,8 @@ contains
   ! be allocatable and will be reallocated if necessary.  Whether to
   ! pemute is specifed by the final optional argument
   subroutine get_real_array3_indexed(this, var_name, var, index, ipermute)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)                   :: this
     character(len=*), intent(in)         :: var_name
     integer, intent(in)                  :: index
@@ -1628,6 +1677,8 @@ contains
   ! be allocatable and will be reallocated if necessary.  Whether to
   ! pemute is specifed by the final optional argument
   subroutine get_real_array3_indexed2(this, var_name, var, index4, index5, ipermute)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)                   :: this
     character(len=*), intent(in)         :: var_name
     integer, intent(in)                  :: index4, index5
@@ -1789,6 +1840,8 @@ contains
   ! inside an OpenMP loop before reading the array in from NetCDF.
  
   subroutine get_real_array4(this, var_name, var, ipermute, ld_first_touch)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_get_var, nf90_strerror
+
     class(netcdf_file)                   :: this
     character(len=*), intent(in)         :: var_name
     real(jprb), allocatable, intent(out) :: var(:,:,:,:)
@@ -1947,6 +2000,9 @@ contains
   !---------------------------------------------------------------------
   ! Get attribute as a character string
   subroutine get_string_attribute(this, var_name, attr_name, attr_str)
+    use netcdf, only: NF90_NOERR, nf90_get_att, &
+        &             nf90_inquire_attribute, nf90_inq_varid, nf90_strerror
+
     class(netcdf_file) :: this
 
     character(len=*), intent(in)    :: var_name, attr_name
@@ -1999,6 +2055,8 @@ contains
   !---------------------------------------------------------------------
   ! Get attribute as a real scalar
   subroutine get_real_scalar_attribute(this, var_name, attr_name, attr)
+    use netcdf, only: NF90_NOERR, nf90_get_att, nf90_inq_varid, nf90_strerror
+
     class(netcdf_file) :: this
 
     character(len=*), intent(in)  :: var_name, attr_name
@@ -2026,6 +2084,9 @@ contains
   !---------------------------------------------------------------------
   ! Get a global attribute as a character string
   subroutine get_global_attribute(this, attr_name, attr_str)
+    use netcdf, only: NF90_NOERR, NF90_GLOBAL, &
+        &             nf90_inquire_attribute, nf90_get_att, nf90_strerror
+
     class(netcdf_file) :: this
 
     character(len=*), intent(in)    :: attr_name
@@ -2073,6 +2134,8 @@ contains
   ! Print a variable's long_name, units and comment, according to
   ! verbosity level
   subroutine print_variable_attributes(this, ivarid, iunit)
+    use netcdf, only: NF90_NOERR, nf90_get_att, nf90_strerror
+
     class(netcdf_file)  :: this
     integer, intent(in) :: ivarid   ! NetCDF ID of variable
     integer, intent(in) :: iunit    ! Unit to print information to
@@ -2116,6 +2179,8 @@ contains
   ! Define a dimension with name dim_name of length n (or 0 to
   ! indicate the unlimited dimension)
   subroutine define_dimension(this, dim_name, n)
+    use netcdf, only: NF90_NOERR, nf90_def_dim, nf90_strerror
+
     class(netcdf_file)           :: this
     character(len=*), intent(in) :: dim_name
     integer, intent(in)          :: n
@@ -2147,6 +2212,10 @@ contains
        &                     dim4_name, long_name, units_str, comment_str, &
        &                     standard_name, is_double, data_type_name, fill_value, &
        &                     deflate_level, shuffle, chunksizes, ndims)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, NF90_DOUBLE, NF90_BYTE, NF90_SHORT, &
+        &             NF90_INT, NF90_FLOAT, nf90_inq_dimid, nf90_strerror, nf90_def_var, &
+        &             nf90_def_var_fill, nf90_put_att
+
     class(netcdf_file)                     :: this
     character(len=*), intent(in)           :: var_name
     character(len=*), intent(in), optional :: long_name, units_str, comment_str, standard_name
@@ -2328,6 +2397,8 @@ contains
   subroutine put_global_attributes(this, title_str, inst_str, source_str, &
        &  comment_str, references_str, creator_name, creator_email_str, &
        &  contributor_name, project_str, conventions_str, prior_history_str)
+    use netcdf, only: NF90_GLOBAL, nf90_put_att
+
     class(netcdf_file)                     :: this
 
     character(len=*), intent(in), optional :: title_str
@@ -2380,6 +2451,8 @@ contains
   !---------------------------------------------------------------------
   ! Put a non-standard global attribute into the file
   subroutine put_global_attribute(this, attr_name, attr_str)
+    use netcdf, only: NF90_GLOBAL, NF90_NOERR, nf90_put_att, nf90_strerror
+
     class(netcdf_file) :: this
 
     character(len=*), intent(in) :: attr_name, attr_str
@@ -2400,6 +2473,8 @@ contains
   !---------------------------------------------------------------------
   ! Put a non-standard variable attribute into the file
   subroutine put_attribute(this, var_name, attr_name, attr_str)
+    use netcdf, only: NF90_NOERR, nf90_put_att, nf90_strerror
+
     class(netcdf_file) :: this
 
     character(len=*), intent(in) :: var_name, attr_name, attr_str
@@ -2424,6 +2499,8 @@ contains
   ! variable with name var_name, according to the rank of the var
   ! argument. This version saves a scalar.
   subroutine put_real_scalar(this, var_name, var)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var
@@ -2458,6 +2535,8 @@ contains
   !---------------------------------------------------------------------
   ! Save a scalar.
   subroutine put_real_scalar_indexed(this, var_name, index, var)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var
@@ -2495,6 +2574,8 @@ contains
   !---------------------------------------------------------------------
   ! Save a vector with name var_name in the file
   subroutine put_real_vector(this, var_name, var)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var(:)
@@ -2528,6 +2609,8 @@ contains
   !---------------------------------------------------------------------
   ! Save an integer vector with name var_name in the file
   subroutine put_int_vector(this, var_name, var)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     integer,          intent(in)   :: var(:)
@@ -2561,6 +2644,8 @@ contains
   !---------------------------------------------------------------------
   ! Save a vector slice with name var_name in the file
   subroutine put_real_vector_indexed(this, var_name, var, index2, index3)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var(:)
@@ -2629,6 +2714,8 @@ contains
   ! dimensions if either optional argument transp is .true., or the
   ! transpose_matrices method has already been called.
   subroutine put_real_matrix(this, var_name, var, do_transp)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var(:,:)
@@ -2694,6 +2781,8 @@ contains
   ! dimensions if either optional argument transp is .true., or the
   ! transpose_matrices method has already been called.
   subroutine put_real_matrix_indexed(this, var_name, var, index3, index4, do_transp)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var(:,:)
@@ -2788,6 +2877,8 @@ contains
   ! containing the size of each dimension in memory and in the written
   ! file, respectively, then NEW=OLD(ipermute).
   subroutine put_real_array3(this, var_name, var, ipermute)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, nf90_put_var, nf90_strerror
+
     class(netcdf_file)             :: this
     character(len=*), intent(in)   :: var_name
     real(jprb), intent(in)         :: var(:,:,:)
@@ -2869,6 +2960,8 @@ contains
   !---------------------------------------------------------------------
   ! Copy dimensions from "infile" to "this"
   subroutine copy_dimensions(this, infile)
+    use netcdf, only: NF90_NOERR, nf90_inq_dimids, nf90_inquire_dimension, nf90_strerror
+
     class(netcdf_file)            :: this
     type(netcdf_file), intent(in) :: infile
 
@@ -2906,6 +2999,11 @@ contains
   !---------------------------------------------------------------------
   ! Copy variable definition and attributes from "infile" to "this"
   subroutine copy_variable_definition(this, infile, var_name)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, &
+        &             nf90_inq_varid, nf90_inquire_variable, &
+        &             nf90_inq_dimid, nf90_inquire_dimension, &
+        &             nf90_def_var, nf90_inq_attname, nf90_copy_att, nf90_strerror
+
     class(netcdf_file)            :: this
     type(netcdf_file), intent(in) :: infile
     character(len=*),  intent(in) :: var_name
@@ -3003,6 +3101,9 @@ contains
   !---------------------------------------------------------------------
   ! Copy variable from "infile" to "this"
   subroutine copy_variable(this, infile, var_name)
+    use netcdf, only: NF90_MAX_VAR_DIMS, NF90_NOERR, NF90_DOUBLE, NF90_FLOAT, &
+        &             nf90_inquire_variable, nf90_strerror
+
     class(netcdf_file)             :: this
     class(netcdf_file), intent(in) :: infile
     character(len=*),   intent(in) :: var_name
